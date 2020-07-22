@@ -1,0 +1,3 @@
+float32 min_angle_deg
+float32 max_angle_deg
+float32 range

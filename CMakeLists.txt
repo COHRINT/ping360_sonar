@@ -57,12 +57,14 @@ add_message_files(
   FILES
   SonarEcho.msg
   SonarMode.msg
+  SonarSettings.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
    SetSonarMode.srv
+   SetSonarSettings.srv
 )
 
 ## Generate actions in the 'action' folder
