@@ -1,8 +1,10 @@
 <launch>
+    <arg name="scan_update_rate_hz" default="1" />
     <arg name="landmark_x" default="0"/>
     <arg name="landmark_y" default="0"/>
     <node name="sonar_control" pkg="ping360_sonar" type="sonar_control_node.py" output="screen">
         <param name="landmark_x" value="$(arg landmark_x)" />
         <param name="landmark_y" value="$(arg landmark_y)" />
+        <param name="scan_update_rate_hz" value="$(arg scan_update_rate_hz)" />
     </node>
 </launch>
