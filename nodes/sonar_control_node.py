@@ -45,22 +45,16 @@ class ScannerControl:
             if req.mode.object == "landmark":
                 position = self.ownship_pose.pose.pose.position
                 angle = np.arctan2(self.landmark_y - position.y,self.landmark_x - position.x)
-                print(angle)
                 target_angle = angle - self.ownship_yaw
-                print(target_angle)
-                print(target_angle - SCAN_ANGLES_RANGE / 2)
-                print(target_angle + SCAN_ANGLES_RANGE / 2)
                 min_scan_angle = normalize_angle( target_angle - SCAN_ANGLES_RANGE / 2 )
                 max_scan_angle = normalize_angle( target_angle + SCAN_ANGLES_RANGE / 2 )
-                print(min_scan_angle)
-                print(max_scan_angle)
             else:
                 raise NotImplementedError("Tracking of: " + req.object)
             # Convert to degrees
             min_scan_angle *= (180/np.pi)
             max_scan_angle *= (180/np.pi)
+            
         try:
-
             print("Configuring settings of: " + str(min_scan_angle) + " - " + str(max_scan_angle))
             resp = set_sonar(SonarSettings(min_scan_angle, max_scan_angle, SEARCH_DISTANCE))
             if resp == True:
