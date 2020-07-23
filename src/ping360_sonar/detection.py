@@ -6,6 +6,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 import cv2 as cv 
+import csv
 
 
 
@@ -21,7 +22,7 @@ class Detection:
 
 
         self.raw_image = None
-        self.max = [0]*200
+        self.avg = [0]*200
         self.done = False
         self.count = 0
         # detections is an array of array of detections, with each detection having a angle and index
@@ -54,6 +55,8 @@ class Detection:
         hi_intens_idx = -1
         #loops through the intensity array
         for i in range(len(intens)):
+            if i < 15:
+                continue
             #checks for spike in intensity
             if not high_intensity:
                 intensity = intens[i]
@@ -72,7 +75,7 @@ class Detection:
 
         #if there was a spike, see if end of array has a lot of zeros
         if high_intensity:
-            num_to_look = int((200-hi_intens_idx)/2)
+            num_to_look = int((self.num_samp-hi_intens_idx)/2)
             total = 0
             for i in range(num_to_look):
                 total += intens[-1-i]
@@ -80,7 +83,7 @@ class Detection:
             # if the average of the end of array is really low, classify as detection
             if avg < 2:
                 # if msg.angle > 155 and msg.angle < 170:
-                #     print(str(msg.angle) + ' : '+ str(hi_intens_idx))
+                #     print(str(msg.angle) + ' : '+ str(hi_intens_idx)+' : '+str(avg))
                 #     print(intens)
                 #     if msg.angle == 93:
                 #         plt.plot(intens)
