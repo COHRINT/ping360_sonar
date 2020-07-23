@@ -10,12 +10,13 @@ import numpy as np
 
 THIRTY_DEG = np.pi/6
 SEARCH_DISTANCE = 10
-SCAN_ANGLES_RANGE = 20
+SCAN_ANGLES_RANGE = 20 * (np.pi / 180)
  
 class ScannerControl:
     def __init__(self):
         self.own_yaw = None
-        ownship = "etddf/estimate" + rospy.get_namespace()[:-1]        
+        # ownship = "etddf/estimate" + rospy.get_namespace()[:-1]
+        ownship = rospy.get_namespace()[:-1] + "/pose_gt"
         rospy.Subscriber(ownship,Odometry,self.pose_callback)
         # rospy.Subscriber("ping_360_target",SonarTargetList,self.check_for_landmark)
         self.landmark_x = rospy.get_param("~landmark_x",10)
@@ -27,9 +28,10 @@ class ScannerControl:
         rospy.Service("ping360_node/sonar/set_scan_mode", SetSonarMode, self.handle_scan_mode)
 
     def handle_scan_mode(self, req):
+        normalize_angle = lambda angle : np.mod( angle + np.pi, 2*np.pi) - np.pi # [-pi,pi]
 
         print("Waiting for ping360_sonar/sonar/set_sonar_settings")
-        rospy.wait_for_service("ping360_sonar/sonar/set_sonar_settings")
+        rospy.wait_for_service("ping360_node/sonar/set_sonar_settings")
         set_sonar = rospy.ServiceProxy("ping360_node/sonar/set_sonar_settings",SetSonarSettings)
 
         min_scan_angle = None
@@ -40,22 +42,32 @@ class ScannerControl:
             max_scan_angle = 360
         else: # TRACK
             # Use our heading to determine where the object is
-            if req.object == "landmark":
-                position = self.ownship_pose.pose.position
+            if req.mode.object == "landmark":
+                position = self.ownship_pose.pose.pose.position
                 angle = np.arctan2(self.landmark_y - position.y,self.landmark_x - position.x)
+                print(angle)
                 target_angle = angle - self.ownship_yaw
-                min_scan_angle = target_angle - SCAN_ANGLES_RANGE / 2
-                max_scan_angle = target_angle + SCAN_ANGLES_RANGE / 2
+                print(target_angle)
+                print(target_angle - SCAN_ANGLES_RANGE / 2)
+                print(target_angle + SCAN_ANGLES_RANGE / 2)
+                min_scan_angle = normalize_angle( target_angle - SCAN_ANGLES_RANGE / 2 )
+                max_scan_angle = normalize_angle( target_angle + SCAN_ANGLES_RANGE / 2 )
+                print(min_scan_angle)
+                print(max_scan_angle)
             else:
                 raise NotImplementedError("Tracking of: " + req.object)
-
+            # Convert to degrees
+            min_scan_angle *= (180/np.pi)
+            max_scan_angle *= (180/np.pi)
         try:
+
             print("Configuring settings of: " + str(min_scan_angle) + " - " + str(max_scan_angle))
-            # resp = set_sonar(SonarSettings(min_scan_angle, max_scan_angle, SEARCH_DISTANCE))
-            # if resp == True:
-            #     print("Successfully changed settings")
+            resp = set_sonar(SonarSettings(min_scan_angle, max_scan_angle, SEARCH_DISTANCE))
+            if resp == True:
+                print("Successfully changed settings")
         except rospy.ServiceException as exc:
             print("Service did not process request: " + str(exc))
+            return False
 
         return True
 
