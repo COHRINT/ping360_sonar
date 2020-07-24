@@ -68,10 +68,10 @@ def callback(config, level):
 def sonar_settings_callback(self, req):
     global minAngle, maxAngle
     normalize_angle = lambda angle : np.mod( angle + 200, 400) - 200 # [-200,200]
-    maxAngle = (400 / 360) * req.settings.max_angle_deg
+    maxAngle = int((400 / 360) * req.settings.max_angle_deg)
     while maxAngle < 0:
         maxAngle += 400
-    minAngle = (400 / 360) * req.settings.min_angle_deg
+    minAngle = int((400 / 360) * req.settings.min_angle_deg)
     while minAngle < 0:
         minAngle += 400
     return True
@@ -237,6 +237,7 @@ def main():
             publishImage(image, imagePub, bridge)
 
         angle += sign * step
+        print(angle)
         while angle < 0:
             angle += 400
         while angle > 400:
