@@ -65,7 +65,7 @@ def callback(config, level):
     firstRequest = False
     return config
 
-def sonar_settings_callback(self, req):
+def sonar_settings_callback(req):
     global minAngle, maxAngle
     normalize_angle = lambda angle : np.mod( angle + 200, 400) - 200 # [-200,200]
     maxAngle = int((400 / 360) * req.settings.max_angle_deg)
@@ -240,7 +240,7 @@ def main():
         print(angle)
         while angle < 0:
             angle += 400
-        while angle > 400:
+        while angle >= 400:
             angle -= 400
         
         if maxAngle > minAngle:
@@ -255,19 +255,13 @@ def main():
                 sign = 1
                 angle = minAngle
         else:
-            if angle >= maxAngle:
+            if angle >= maxAngle and angle < minAngle:
                 if not oscillate:
                     angle = minAngle
                     sign = 1
                 else:
                     angle = maxAngle
                     sign = -1
-            if angle <= minAngle and oscillate:
-                sign = 1
-                angle = minAngle
-            elif angle <= minAngle and not oscillate:
-                angle = maxAngle
-                sign = -1
 
         rate.sleep()
 
