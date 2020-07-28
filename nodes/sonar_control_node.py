@@ -26,6 +26,9 @@ class ScannerControl:
         self.landmark_y = rospy.get_param("~landmark_y",0)
         self.scan_update_rate = rospy.get_param("~scan_update_rate_hz")
 
+        self._red_team_names = rospy.get_param('~red_team_names',[])
+        self._red_agent_id = self._red_team_names[0]
+
         self.cuprint("waiting for set_sonar_settings service")
         rospy.wait_for_service("ping360_node/sonar/set_sonar_settings")
         self.set_sonar = rospy.ServiceProxy("ping360_node/sonar/set_sonar_settings",SetSonarSettings)
@@ -62,7 +65,7 @@ class ScannerControl:
                     # Convert to degrees
                     min_scan_angle *= (180/np.pi)
                     max_scan_angle *= (180/np.pi)
-                elif req.mode.object == "red_actor_0":
+                elif req.mode.object == self._red_agent_id:
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
                     red_position = self.red_actor_pose.pose.pose.position
