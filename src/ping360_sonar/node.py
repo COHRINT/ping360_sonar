@@ -264,12 +264,12 @@ def main():
             print(rospy.get_rostime())
             sign = 1
             angle = minAngle
-        angle += sign * step
-        print(angle)
-        while angle < 0:
-            angle += 400
-        while angle >= 400:
-            angle -= 400
+        # angle += sign * step
+        # print(angle)
+        # while angle < 0:
+        #     angle += 400
+        # while angle >= 400:
+        #     angle -= 400
         
         # if maxAngle > minAngle:
         #     if angle >= maxAngle:

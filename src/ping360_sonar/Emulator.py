@@ -41,7 +41,7 @@ class Serial:
 
 
         self.ranges = None
-        rospy.Subscriber("all_sonar_filitered",LaserScan,self.sonar_data_callback)
+        rospy.Subscriber("sonar_filtered",LaserScan,self.sonar_data_callback)
 
         self.angle = 0
         self.range = 10

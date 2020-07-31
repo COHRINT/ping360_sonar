@@ -1,4 +1,7 @@
 <launch>
+    <arg name="is_landmark" default="False"/>
+    <arg name="landmark_x" default="0"/>
+    <arg name="landmark_y" default="0"/>
     <node pkg="tf" type="static_transform_publisher" name="transform_sonar_frame" args="0 0 0 0 0 0 1 map sonar_frame 10" />
     <env name="emulated_sonar" value="true" />
     <node pkg="ping360_sonar" type="ping360_node" name="ping360_node" output="screen">
@@ -23,5 +26,13 @@
         <param name="avg_file" value="$(find ping360_sonar)/src/ping360_sonar/avg.csv"/>
         <param name="std_file" value="$(find ping360_sonar)/src/ping360_sonar/std_dev.csv"/>
     </node>
+    <node pkg="ping360_sonar" type="gazebo_sensor.py" name="emulated_sonar" output="screen"/>
+    <node pkg="ping360_sonar" type="detection.py" name="sonar_detection" output="screen">
+        <param name="is_landmark" value="$(arg is_landmark)"/>
+        <param name="landmark_x" value="$(arg landmark_x)"/>
+        <param name="landmark_y" value="$(arg landmark_y)"/>
+    </node>
+
+
     
 </launch>
