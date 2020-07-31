@@ -14,11 +14,11 @@ class Detection:
     def __init__(self):
 
         #Subscribe to the sonar data
-        rospy.Subscriber("/ping360_node/sonar/data",SonarEcho,self.data_callback)
-        rospy.Subscriber("/ping360_node/sonar/images",Image,self.image_callback)
+        rospy.Subscriber("ping360_node/sonar/data",SonarEcho,self.data_callback)
+        rospy.Subscriber("ping360_node/sonar/images",Image,self.image_callback)
 
         #Set up publisher to republish image with detections marked as red on them
-        self.image_pub = rospy.Publisher("/ping360_node/sonar/modified_image",Image,queue_size=10)
+        self.image_pub = rospy.Publisher("ping360_node/sonar/modified_image",Image,queue_size=10)
 
 
         self.raw_image = None

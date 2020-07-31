@@ -102,6 +102,10 @@ def main():
     imgSize = int(rospy.get_param('~imgSize', 500))
     queue_size = int(rospy.get_param('~queueSize', 1))
 
+    time = ((13.*sonarRange)/24) + (95./12)
+    timePer = (time/400.) * step
+    previousTime = 0.0
+
     # TODO: improve configuration validation
     if FOV <= 0:
         rospy.logerr(
@@ -137,11 +141,11 @@ def main():
 
     # Topic publishers
     imagePub = rospy.Publisher(
-        "/ping360_node/sonar/images", Image, queue_size=queue_size)
-    rawPub = rospy.Publisher("/ping360_node/sonar/data",
+        "ping360_node/sonar/images", Image, queue_size=queue_size)
+    rawPub = rospy.Publisher("ping360_node/sonar/data",
                              SonarEcho, queue_size=queue_size)
     laserPub = rospy.Publisher(
-        "/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
+        "ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
 
     # Initialize and configure the sonar
     updateSonarConfig(sensor, gain, transmitFrequency,
@@ -168,14 +172,16 @@ def main():
             angle_increment = 2 * pi * step / 400
             ranges = [0] * (FOV // step)
             intensities = [0] * (FOV // step)
+            time = ((13.*sonarRange)/24) + (95./12)
+            timePer = (time/400.)*step
         # Get sonar response
+        
         data = getSonarData(sensor, angle)
-
+        
         # Contruct and publish Sonar data msg
         if enableDataTopic:
             rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange)
             rawPub.publish(rawDataMsg)
-
         # Prepare scan msg
         if enableScanTopic:
             index = int(((angle - minAngle) * 2 * pi / 400) / angle_increment)
@@ -197,7 +203,6 @@ def main():
             # Contruct and publish Sonar scan msg
             scanDataMsg = generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle)
             laserPub.publish(scanDataMsg)
-
         # Contruct and publish Sonar image msg
         if enableImageTopic:
             linear_factor = float(len(data)) / float(center[0])
@@ -220,8 +225,17 @@ def main():
 
             publishImage(image, imagePub, bridge)
 
-        angle += sign * step
+        nowTime = rospy.get_rostime().secs + float(rospy.get_rostime().nsecs) * 10**(-9)
+        count = 0
+        while nowTime > previousTime:
+            count += 1
+            previousTime += timePer
+        angle += sign * step * count
+
+        # angle += sign * step
         if angle >= maxAngle:
+            print(rospy.get_namespace())
+            print(rospy.get_rostime())
             if not oscillate:
                 angle = minAngle
             else:
@@ -229,9 +243,10 @@ def main():
                 sign = -1
 
         if angle <= minAngle and oscillate:
+            print(rospy.get_namespace())
+            print(rospy.get_rostime())
             sign = 1
             angle = minAngle
-
         rate.sleep()
 
 

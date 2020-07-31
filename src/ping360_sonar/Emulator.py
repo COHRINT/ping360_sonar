@@ -4,7 +4,11 @@ import errno
 import math
 import numpy as np
 import random
+import csv
 import perlin
+import rospy
+from sensor_msgs.msg import LaserScan
+from ping360_sonar.msg import SonarEcho
 
 verbose = False
 payload_dict = definitions.payload_dict_all
@@ -35,6 +39,20 @@ class Serial:
         self._receivedData = ""
         self.in_waiting = 1
 
+
+        self.ranges = None
+        rospy.Subscriber("all_sonar_filitered",LaserScan,self.sonar_data_callback)
+
+        self.angle = 0
+        self.range = 10
+        rospy.Subscriber("ping360_node/sonar/data",SonarEcho,self.angle_callback)
+
+
+        self.avg_file = rospy.get_param("~avg_file")
+        self.std_file = rospy.get_param("~std_file")
+        self.avg_data = None
+        self.std_data = None
+
         self.parser = PingParser()  # used to parse incoming client comunications
 
         self._gain_setting = 0
@@ -48,6 +66,7 @@ class Serial:
         self._data_length = 10
 
         self._noise = perlin.noise(400, 50, 50)
+        self.open_files()
 
     # isOpen()
     # returns True if the port to the Arduino is open.  False otherwise
@@ -87,7 +106,7 @@ class Serial:
         except KeyError as e:
             if verbose:
                 print("skipping unrecognized message id: %d" %
-                      self.parser.rx_msg.message_id)
+                      shandleMessageelf.parser.rx_msg.message_id)
                 print("contents: %s" % self.parser.rx_msg.msg_data)
             pass
 
@@ -95,8 +114,10 @@ class Serial:
     # reads n characters from the fake Arduino. Actually n characters
     # are read from the string _data and returned to the caller.
     def read(self, n=1):
-        s = self._read_data[0:n]
-        self._read_data = self._read_data[n:]
+        # s = self._read_data[0:n]
+        # self._read_data = self._read_data[n:]
+        s = self._read_data
+        self._read_data = []
         return s
 
     # readline()
@@ -131,7 +152,7 @@ class Serial:
             try:
                 # see if we have a function for this attribute (dynamic data)
                 # if so, call it and put the result in the message field
-                setattr(msg, attr, getattr(self, attr)())
+                setattr(msg, attr, getattr(self, attr))
             except AttributeError as e:
                 try:
                     # if we don't have a function for this attribute, check for a _<field_name> member
@@ -184,15 +205,33 @@ class Serial:
         self._read_data = msg.msg_data
 
     def generateRandomData(self):
-        sigma = 10
+        if self.std_data == None or self.ranges == None:
+            return
+        gen_data = []
+        if self.ranges[int(self.angle)] == -1:
+            for i in range(self._number_of_samples):
+                gen_data.append(int(np.random.normal(self.avg_data[i],self.std_data[i])))
+                if gen_data[i] > 255:
+                    gen_data[i] = 255
+                if gen_data[i] < 0:
+                    gen_data[i] = 0
+        else:
+            idx = int((self.ranges[int(self.angle)]*self._number_of_samples)/self.range)
+            for i in range(self._number_of_samples):
+                if i < idx:
+                    gen_data.append(int(np.random.normal(self.avg_data[i],self.std_data[i])))
+                elif i == idx:
+                    gen_data.append(int(self.avg_data[i]+90))
+                else:
+                    gen_data.append(int(np.random.normal(self.avg_data[i],self.std_data[i])*(np.exp((idx-i)/15.))))
+                if gen_data[i] > 255:
+                    gen_data[i] = 255
+                if gen_data[i] < 0:
+                    gen_data[i] = 0
 
-        if(self._angle == 0):
-            self._noise = perlin.noise(400, 50, 50)
-
-        mu = 100 + int(self._noise[self._angle]) + random.randint(-1, 1)
-
-        self._data = "".join([chr(int(255 * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sigma, 2.)))))
+        self._data = "".join([chr(int(gen_data[x]))
                               for x in range(self._number_of_samples)])
+
 
     #
     # Helpers for generating periodic data
@@ -203,3 +242,22 @@ class Serial:
 
     def periodicFnInt(self, amplitude=0, offset=0, frequency=1.0, shift=0):
         return int(self.periodicFn(amplitude, offset, frequency, shift))
+    def open_files(self):
+        print(self.avg_file)
+        with open(self.avg_file) as f:
+            reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+            self.avg_data = list(reader)
+
+        self.avg_data = self.avg_data[0]
+
+        with open(self.std_file) as f:
+            reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+            self.std_data = list(reader)
+
+        self.std_data = self.std_data[0]
+    
+    def sonar_data_callback(self,msg):
+        self.ranges = msg.ranges
+    def angle_callback(self,msg):
+        self.angle = msg.angle % 400
+        self.range = msg.range

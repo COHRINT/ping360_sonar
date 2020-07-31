@@ -20,5 +20,7 @@
         <param name="maxAngle" value="400"/> 
         <param name="minAngle" value="0"/> 
         <param name="oscillate" value="True"/> 
+        <param name="avg_file" value="$(find ping360_sonar)/src/ping360_sonar/avg.csv"/>
+        <param name="std_file" value="$(find ping360_sonar)/src/ping360_sonar/std_dev.csv"/>
     </node>
 </launch>

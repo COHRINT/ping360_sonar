@@ -8,6 +8,7 @@ from device import PingDevice
 from brping import pingmessage
 import serial
 import time
+import rospy
 
 
 class Ping360(PingDevice):
