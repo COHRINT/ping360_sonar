@@ -20,10 +20,14 @@ class ScannerControl:
         # ownship = "etddf/estimate" + rospy.get_namespace()[:-1]
         ownship = rospy.get_namespace()[:-1] + "/pose_gt"
         rospy.Subscriber(ownship,Odometry,self.pose_callback)
+        rospy.Subscriber("etddf/estimate/red_actor_0", Odometry, self.red_actor_callback)
         # rospy.Subscriber("ping_360_target",SonarTargetList,self.check_for_landmark)
         self.landmark_x = rospy.get_param("~landmark_x",10)
         self.landmark_y = rospy.get_param("~landmark_y",0)
         self.scan_update_rate = rospy.get_param("~scan_update_rate_hz")
+
+        self._red_team_names = rospy.get_param('~red_team_names',[])
+        self._red_agent_id = self._red_team_names[0]
 
         self.cuprint("waiting for set_sonar_settings service")
         rospy.wait_for_service("ping360_node/sonar/set_sonar_settings")
@@ -51,7 +55,6 @@ class ScannerControl:
                 if req.mode.mode == req.mode.SCAN360:
                     min_scan_angle = 0
                     max_scan_angle = 360
-                    self.tracking = None
                 elif req.mode.object == "landmark": # TRACK LANDMARK
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
@@ -59,11 +62,20 @@ class ScannerControl:
                     target_angle = angle - self.ownship_yaw
                     min_scan_angle = normalize_angle( target_angle - SCAN_ANGLES_RANGE / 2 )
                     max_scan_angle = normalize_angle( target_angle + SCAN_ANGLES_RANGE / 2 )
-                    self.tracking = "landmark"
                     # Convert to degrees
                     min_scan_angle *= (180/np.pi)
                     max_scan_angle *= (180/np.pi)
-                    
+                elif req.mode.object == self._red_agent_id:
+                    # Use our heading to determine where the object is
+                    position = self.ownship_pose.pose.pose.position
+                    red_position = self.red_actor_pose.pose.pose.position
+                    angle = np.arctan2(red_position.y - position.y,red_position.x - position.x)
+                    target_angle = angle - self.ownship_yaw
+                    min_scan_angle = normalize_angle( target_angle - SCAN_ANGLES_RANGE / 2 )
+                    max_scan_angle = normalize_angle( target_angle + SCAN_ANGLES_RANGE / 2 )
+                    # Convert to degrees
+                    min_scan_angle *= (180/np.pi)
+                    max_scan_angle *= (180/np.pi)
                 try:
                     print("Configuring settings of: " + str(min_scan_angle) + " - " + str(max_scan_angle))
                     resp = self.set_sonar(SonarSettings(min_scan_angle, max_scan_angle, SEARCH_DISTANCE))
@@ -80,10 +92,15 @@ class ScannerControl:
             self.cuprint("Scanning 360")
         elif req.mode.object == "landmark":
             self.cuprint("Tracking Landmark")
+        elif req.mode.object == "red_actor_0":
+            self.cuprint("Tracking Red Actor")
         else:
             raise NotImplementedError("Tracking of: " + req.object)
         self.last_req = req
         return True
+
+    def red_actor_callback(self, msg):
+        self.red_actor_pose = msg
 
     def pose_callback(self,msg):
         """
