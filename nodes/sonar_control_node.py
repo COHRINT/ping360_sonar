@@ -10,8 +10,9 @@ import numpy as np
 from cuprint.cuprint import CUPrint
 
 THIRTY_DEG = np.pi/6
-SEARCH_DISTANCE = 10
+DEFAULT_SCAN_360_RANGE_M = 5
 SCAN_ANGLES_RANGE = 20 * (np.pi / 180)
+ADDITIONAL_SEARCH_ROOM = 2 # When tracking an object or asset, add this distance to the scan range
  
 class ScannerControl:
     def __init__(self):
@@ -25,6 +26,7 @@ class ScannerControl:
         self.landmark_x = rospy.get_param("~landmark_x",10)
         self.landmark_y = rospy.get_param("~landmark_y",0)
         self.scan_update_rate = rospy.get_param("~scan_update_rate_hz")
+        self.scan_range_360 = rospy.get_param("~360_scan_range_m", DEFAULT_SCAN_360_RANGE_M)
 
         self._red_team_names = rospy.get_param('~red_team_names',[])
         self._red_agent_id = self._red_team_names[0]
@@ -51,10 +53,12 @@ class ScannerControl:
             if req != None:
                 min_scan_angle = None
                 max_scan_angle = None
+                scan_range = None
                 # SCAN360
                 if req.mode.mode == req.mode.SCAN360:
                     min_scan_angle = 0
                     max_scan_angle = 360
+                    scan_range = self.scan_range_360
                 elif req.mode.object == "landmark": # TRACK LANDMARK
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
@@ -65,6 +69,7 @@ class ScannerControl:
                     # Convert to degrees
                     min_scan_angle *= (180/np.pi)
                     max_scan_angle *= (180/np.pi)
+                    scan_range = int(np.linalg.norm([self.landmark_x - position.x, self.landmark_y - position.y])) + ADDITIONAL_SEARCH_ROOM
                 elif req.mode.object == self._red_agent_id:
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
@@ -76,9 +81,10 @@ class ScannerControl:
                     # Convert to degrees
                     min_scan_angle *= (180/np.pi)
                     max_scan_angle *= (180/np.pi)
+                    scan_range = int(np.linalg.norm([red_position.x - position.x, red_position.y - position.y])) + ADDITIONAL_SEARCH_ROOM
                 try:
                     print("Configuring settings of: " + str(min_scan_angle) + " - " + str(max_scan_angle))
-                    resp = self.set_sonar(SonarSettings(min_scan_angle, max_scan_angle, SEARCH_DISTANCE))
+                    resp = self.set_sonar(SonarSettings(min_scan_angle, max_scan_angle, scan_range))
                     if resp == True:
                         print("Successfully changed settings")
                 except rospy.ServiceException as exc:
