@@ -15,6 +15,7 @@ from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
 from ping360_sonar.srv import SetSonarSettings
 from sensor import Ping360
+from std_msgs.msg import UInt16MultiArray
 
 # Global Variables
 
@@ -114,6 +115,8 @@ def main():
     step = int(rospy.get_param('~step', 1))
     imgSize = int(rospy.get_param('~imgSize', 500))
     queue_size = int(rospy.get_param('~queueSize', 1))
+
+    angle_pub = rospy.Publisher("sonar/scan_range", UInt16MultiArray, queue_size=10)
 
     # TODO: improve configuration validation
     # if FOV <= 0:
@@ -236,6 +239,9 @@ def main():
 
             publishImage(image, imagePub, bridge)
 
+        angle_msg = UInt16MultiArray()
+        angle_msg.data = [minAngle, maxAngle]
+        angle_pub.publish(angle_msg)
         angle += sign * step
         print(angle)
         while angle < 0:
