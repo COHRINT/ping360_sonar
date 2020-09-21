@@ -40,7 +40,29 @@ enableDataTopic = False
 maxAngle = None
 minAngle = None
 oscillate = None
+convertToEnu = False
 
+
+
+def grad_to_rad(grads):
+    return 2 * pi * grads / 400
+
+def deg_to_grad(degs):
+    return (400.0 / 360.0 ) * degs
+
+def wrap_angle(angle):
+    while angle < 0:
+        angle += 400
+    while angle >= 400:
+        angle -= 400
+    return angle
+
+def ned_to_enu(angle):
+    angle = wrap_angle(angle)
+    if angle < deg_to_grad(180.0):
+        return -1.0 * angle
+    else:
+        return  (-1.0 * deg_to_grad(180.0)) / (deg_to_grad(360.0) - deg_to_grad(180.0)) * angle + deg_to_grad(360.0)
 
 def callback(config, level):
     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
@@ -68,10 +90,10 @@ def callback(config, level):
 def sonar_settings_callback(req):
     global minAngle, maxAngle
     normalize_angle = lambda angle : np.mod( angle + 200, 400) - 200 # [-200,200]
-    maxAngle = int((400 / 360) * req.settings.max_angle_deg)
+    maxAngle = int(deg_to_grad(req.settings.max_angle_deg))
     while maxAngle < 0:
         maxAngle += 400
-    minAngle = int((400 / 360) * req.settings.min_angle_deg)
+    minAngle = int(deg_to_grad(req.settings.min_angle_deg))
     while minAngle < 0:
         minAngle += 400
     return True
@@ -79,7 +101,7 @@ def sonar_settings_callback(req):
 def main():
     global updated, gain, numberOfSamples, transmitFrequency, transmitDuration, sonarRange, \
         speedOfSound, samplePeriod, debug, step, imgSize, queue_size, threshold, \
-        enableDataTopic, enableImageTopic, enableScanTopic, oscillate, minAngle, maxAngle
+        enableDataTopic, enableImageTopic, enableScanTopic, oscillate, minAngle, maxAngle, convertToEnu
 
     # grad = lambda angle : (400/360) * angle
     # Initialize node
@@ -114,6 +136,7 @@ def main():
     step = int(rospy.get_param('~step', 1))
     imgSize = int(rospy.get_param('~imgSize', 500))
     queue_size = int(rospy.get_param('~queueSize', 1))
+    convertToEnu = rospy.get_param('~convertToEnu', False)
 
     # TODO: improve configuration validation
     # if FOV <= 0:
@@ -166,7 +189,7 @@ def main():
     image = np.zeros((imgSize, imgSize, 1), np.uint8)
 
     # Initial the LaserScan Intensities & Ranges
-    angle_increment = 2 * pi * step / 400
+    angle_increment = grad_to_rad(step)
     ranges = [0] * (FOV // step)
     intensities = [0] * (FOV // step)
 
@@ -181,7 +204,7 @@ def main():
         if updated:
             updateSonarConfig(sensor, gain, transmitFrequency,
                               transmitDuration, samplePeriod, numberOfSamples)
-            angle_increment = 2 * pi * step / 400
+            angle_increment = grad_to_rad(step)
             ranges = [0] * (FOV // step)
             intensities = [0] * (FOV // step)
         # Get sonar response
@@ -189,7 +212,7 @@ def main():
 
         # Contruct and publish Sonar data msg
         if enableDataTopic:
-            rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange)
+            rawDataMsg = generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange, convertToEnu)
             rawPub.publish(rawDataMsg)
 
         # Prepare scan msg
@@ -224,7 +247,9 @@ def main():
                     else:
                         pointColor = 0
                     for k in np.linspace(0, step, 8 * step):
-                        theta = 2 * pi * (angle + k) / 400.0
+                        theta = grad_to_rad(angle + k)
+                        if convertToEnu:
+                            theta = ned_to_enu(theta)
                         x = float(i) * cos(theta)
                         y = float(i) * sin(theta)
                         image[int(center[0] + x)][int(center[1] + y)
@@ -238,10 +263,11 @@ def main():
 
         angle += sign * step
         print(angle)
-        while angle < 0:
-            angle += 400
-        while angle >= 400:
-            angle -= 400
+        # while angle < 0:
+        #     angle += 400
+        # while angle >= 400:
+        #     angle -= 400
+        angle = wrap_angle(angle)
         
         if maxAngle > minAngle:
             if angle >= maxAngle:
@@ -280,7 +306,7 @@ def getSonarData(sensor, angle):
     return [k for k in data]
 
 
-def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange):
+def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedOfSound, sonarRange, convertToEnu):
     """
     Generates the raw message for the data topic
     Args:
@@ -297,7 +323,10 @@ def generateRawMsg(angle, data, gain, numberOfSamples, transmitFrequency, speedO
     msg = SonarEcho()
     msg.header.stamp = rospy.Time.now()
     msg.header.frame_id = 'sonar_frame'
-    msg.angle = angle
+    if convertToEnu:
+        msg.angle = ned_to_enu(angle)
+    else:
+        msg.angle = angle
     msg.gain = gain
     msg.number_of_samples = numberOfSamples
     msg.transmit_frequency = transmitFrequency
@@ -319,9 +348,9 @@ def generateScanMsg(ranges, intensities, sonarRange, step, maxAngle, minAngle):
     msg = LaserScan()
     msg.header.stamp = rospy.Time.now()
     msg.header.frame_id = 'sonar_frame'
-    msg.angle_min = 2 * pi * minAngle / 400
-    msg.angle_max = 2 * pi * maxAngle / 400
-    msg.angle_increment = 2 * pi * step / 400
+    msg.angle_min = grad_to_rad(minAngle)
+    msg.angle_max = grad_to_rad(maxAngle)
+    msg.angle_increment = grad_to_rad(step)
     msg.time_increment = 0
     msg.range_min = .75
     msg.range_max = sonarRange
