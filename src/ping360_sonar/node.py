@@ -199,7 +199,7 @@ def main():
     # Center point coordinates
     center = (float(imgSize / 2), float(imgSize / 2))
 
-    rate = rospy.Rate(100)  # 100hz
+    rate = rospy.Rate(2)  # 100hz
 
     while not rospy.is_shutdown():
         FOV = abs(abs(maxAngle) - abs(minAngle))  # The sonars field of view
