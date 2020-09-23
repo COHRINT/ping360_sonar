@@ -3,8 +3,8 @@ from __future__ import division
 import rospy
 from nav_msgs.msg import Odometry
 import tf
-from ping360_sonar.srv import SetSonarSettings, SetSonarMode
-from ping360_sonar.msg import SonarSettings
+from ping360_sonar.srv import SetSonarSettings, SetSonarMode, SetSonarModeRequest
+from ping360_sonar.msg import SonarSettings, SonarMode
 from minau.msg import SonarTargetList, SonarTarget
 import numpy as np
 from cuprint.cuprint import CUPrint
@@ -21,25 +21,32 @@ class ScannerControl:
         # ownship = "etddf/estimate" + rospy.get_namespace()[:-1]
         ownship = rospy.get_namespace()[:-1] + "/pose_gt"
         rospy.Subscriber(ownship,Odometry,self.pose_callback)
+        rospy.wait_for_message(ownship, Odometry)
         rospy.Subscriber("etddf/estimate/red_actor_0", Odometry, self.red_actor_callback)
         # rospy.Subscriber("ping_360_target",SonarTargetList,self.check_for_landmark)
-        self.landmark_x = rospy.get_param("~landmark_x",10)
-        self.landmark_y = rospy.get_param("~landmark_y",0)
+        self.landmark_dict = rospy.get_param("~landmarks")
+        default_track = rospy.get_param("~default_track")
+        print(default_track)
+        if default_track != "None":
+            self.last_req = SetSonarModeRequest()
+            self.last_req.mode.object = default_track
+            self.last_req.mode.mode = self.last_req.mode.TRACK
+            self.cuprint("Tracking Landmark: " + self.last_req.mode.object[len("landmark_"):])
+        else:
+            self.last_req = None
         self.scan_update_rate = rospy.get_param("~scan_update_rate_hz")
         self.scan_range_360 = rospy.get_param("~360_scan_range_m", DEFAULT_SCAN_360_RANGE_M)
 
         self._red_team_names = rospy.get_param('~red_team_names',[])
-        self._red_agent_id = self._red_team_names[0]
+        if len(self._red_team_names) > 0:
+            self._red_agent_id = self._red_team_names[0]
+        else:
+            self._red_agent_id = -1
 
         self.cuprint("waiting for set_sonar_settings service")
         rospy.wait_for_service("ping360_node/sonar/set_sonar_settings")
         self.set_sonar = rospy.ServiceProxy("ping360_node/sonar/set_sonar_settings",SetSonarSettings)
         self.cuprint("...service found")
-
-        self.last_req = None
-
-        # self.seen_landmark = False
-        # self.previous = None
 
         rospy.Service("ping360_node/sonar/set_scan_mode", SetSonarMode, self.handle_scan_mode)
 
@@ -59,17 +66,20 @@ class ScannerControl:
                     min_scan_angle = 0
                     max_scan_angle = 360
                     scan_range = self.scan_range_360
-                elif req.mode.object == "landmark": # TRACK LANDMARK
+                elif "landmark" in req.mode.object: # TRACK LANDMARK
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
-                    angle = np.arctan2(self.landmark_y - position.y,self.landmark_x - position.x)
+                    landmark_name = req.mode.object[len("landmark_"):]
+                    landmark_x, landmark_y, landmark_z = self.landmark_dict[landmark_name]
+                    angle = np.arctan2(landmark_y - position.y,landmark_x - position.x)
                     target_angle = angle - self.ownship_yaw
                     min_scan_angle = normalize_angle( target_angle - SCAN_ANGLES_RANGE / 2 )
                     max_scan_angle = normalize_angle( target_angle + SCAN_ANGLES_RANGE / 2 )
                     # Convert to degrees
                     min_scan_angle *= (180/np.pi)
                     max_scan_angle *= (180/np.pi)
-                    scan_range = int(np.linalg.norm([self.landmark_x - position.x, self.landmark_y - position.y])) + ADDITIONAL_SEARCH_ROOM
+                    # scan_range = int(np.linalg.norm([landmark_x - position.x, landmark_y - position.y])) + ADDITIONAL_SEARCH_ROOM
+                    scan_range = 10
                 elif req.mode.object == self._red_agent_id:
                     # Use our heading to determine where the object is
                     position = self.ownship_pose.pose.pose.position
@@ -96,8 +106,8 @@ class ScannerControl:
     def handle_scan_mode(self, req):
         if req.mode.mode == req.mode.SCAN360:
             self.cuprint("Scanning 360")
-        elif req.mode.object == "landmark":
-            self.cuprint("Tracking Landmark")
+        elif "landmark" in req.mode.object :
+            self.cuprint("Tracking Landmark: " + req.mode.object[len("landmark_"):])
         elif req.mode.object == "red_actor_0":
             self.cuprint("Tracking Red Actor")
         else:
@@ -117,58 +127,6 @@ class ScannerControl:
         """
         self.ownship_pose = msg
         (r, p, self.ownship_yaw) = tf.transformations.euler_from_quaternion([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
-
-
- 
-    # def check_for_landmark(self,msg):
-    #     for i in range(len(msg.targets)):
-    #         print("I saw a " + msg.targets[i].id)
-    #         if msg.targets[i].id == "landmark":
-    #             self.seen_landmark = True
- 
-    # def run(self):
-    #     """
-    #     Read in settings from 
-    #     """
-    #     rate = rospy.Rate(5)
-    #     while True:
-    #         if self.own_yaw == None:
-    #             rate.sleep()
-    #             continue
-    #         if self.own_pose.pose.covariance[0] + self.own_pose.pose.covariance[7] > self.threshold:
-    #             print("Passed threshold")
-    #             self.previous = self.get_sonar().settings
-    #             distance = self.get_dist([self.own_pose.pose.pose.position.x,self.own_pose.pose.pose.position.y])
-    #             relative_diff = [self.landmark_loc[0]-self.own_pose.pose.pose.position.x,self.landmark_loc[1]-self.own_pose.pose.pose.position.y]
-    #             angle = np.arctan2(relative_diff[1],relative_diff[0])
-    #             # print(relative_diff)
-    #             # print(angle)
-    #             angle = angle - self.own_yaw
-    #             # print(angle)
-    #             self.seen_landmark = False
-    #             num = 2
-    #             while not self.seen_landmark:
-    #                 settings = SonarSettings()
-    #                 settings.range = distance+np.sqrt(self.own_pose.pose.covariance[0])*num
-    #                 #make sonar point turn toward where we think landmark is
-    #                 settings.min_angle = angle-THIRTY_DEG
-    #                 settings.max_angle = angle+THIRTY_DEG
-    #                 self.set_sonar(settings).time-.5
-    #                 #make sonar go 360
-    #                 settings.min_angle = -4
-    #                 settings.max_angle = 4
-    #                 wait_time = self.set_sonar(settings).time-.5
-    #                 start_time = convert_ros_time(rospy.get_rostime())
-    #                 rate2 = rospy.Rate(10)
-    #                 while (convert_ros_time(rospy.get_rostime()) - start_time < wait_time) and not self.seen_landmark:
-    #                     rate2.sleep()
-    #                 #if the landmark hasn't been seen, check a wider area
-    #                 if not self.seen_landmark:
-    #                     print('Expanding Range')
-    #                     num+=1
-    #                 else:
-    #                     print('I saw the landmark!')
-    #                     self.set_sonar(self.previous)
  
 if __name__ == "__main__":
     rospy.init_node("sonar_control")

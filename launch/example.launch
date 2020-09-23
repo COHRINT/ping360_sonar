@@ -8,7 +8,7 @@
         <param name="imgSize" value="500"/>
         <param name="gain" value="0"/>
         <param name="step" value="2"/>
-        <param name="numberOfSamples" value="100"/>
+        <param name="numberOfSamples" value="512"/>
         <param name="transmitFrequency" value="740"/>
         <param name="sonarRange" value="10"/>
         <param name="speedOfSound" value="1500"/>
@@ -19,6 +19,7 @@
         <param name="enableDataTopic" value="True"/> 
         <param name="maxAngle" value="400"/> 
         <param name="minAngle" value="0"/> 
-        <param name="oscillate" value="True"/> 
+        <param name="oscillate" value="True"/>
+        <param name="convertToEnu" value="True"/>
     </node>
 </launch>
