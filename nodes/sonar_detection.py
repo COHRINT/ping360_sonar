@@ -10,6 +10,8 @@ import struct
 THRESHOLD = 130
 MIN_DIST = 1.5
 
+FILTER_EXTENDED_SHADOW = True
+
 rospy.init_node("sonar_detector")
 pub = rospy.Publisher("sonar_processing/target_list", SonarTargetList, queue_size=10)
 pub2 = rospy.Publisher("sonar_processing/averages2", Float64MultiArray, queue_size=10)
