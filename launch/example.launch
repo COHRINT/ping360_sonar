@@ -22,4 +22,6 @@
         <param name="oscillate" value="True"/>
         <param name="convertToEnu" value="True"/>
     </node>
+
+    <node pkg="ping360_sonar" type="sonar_detection.py" name="sonar_detection" output="screen" /> 
 </launch>
