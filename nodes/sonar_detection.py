@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
+import os
 import rospy
 from ping360_sonar.msg import SonarEcho
 import numpy as np
 from minau.msg import SonarTargetList, SonarTarget
 from std_msgs.msg import Float64MultiArray
 import struct
+import pickle
 
 THRESHOLD = 130
 MIN_DIST = 1.5
@@ -18,12 +20,20 @@ rospy.init_node("sonar_detector")
 pub = rospy.Publisher("sonar_processing/target_list", SonarTargetList, queue_size=10)
 pub2 = rospy.Publisher("sonar_processing/averages2", Float64MultiArray, queue_size=10)
 
+pickle_path = rospy.get_param('~pickle_path', os.path.join('..','cfg','detection_averages.pickle'))
+
 NUM_BINS = 20
 
-averages_mat = np.zeros((NUM_BINS,(400 / STEP)))
+saved = False
+
+if os.path.exists(pickle_path):
+    averages_mat = pickle.load(open(pickle_path, 'rb'))
+    saved = True
+else:
+    averages_mat = np.zeros((NUM_BINS,(400 / STEP)))
 
 def callback(msg):
-    global pub, pub2, THRESHOLD, MIN_DIST, NUM_BINS, COUNTER
+    global pub, pub2, THRESHOLD, MIN_DIST, NUM_BINS, COUNTER, saved, pickle_path
     
     # values = [x for x in msg.intensities)]
     vals = []
@@ -45,6 +55,10 @@ def callback(msg):
     print(cnt)
     if cnt >= NUM_BINS * (400 / STEP):
         print("FULL")
+        if not saved:
+            pickle.dump(averages_mat, open(pickle_path, 'wb+'))
+            print('Saved averages to pickle')
+            saved = True
         for i in range(4,10): # 10 bins seemed to be the max
             mean_radial = np.mean(averages_mat[i,:])
             std_radial = np.std(averages_mat[i,:])
