@@ -60,6 +60,6 @@ def callback(msg):
                 pub.publish(stl)
         
 
-rospy.Subscriber("/ping360_node/sonar/data", SonarEcho, callback)
+rospy.Subscriber("ping360_node/sonar/data", SonarEcho, callback)
 print("loaded")
 rospy.spin()
