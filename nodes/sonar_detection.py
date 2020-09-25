@@ -9,6 +9,7 @@ import struct
 
 THRESHOLD = 130
 MIN_DIST = 1.5
+COUNTER = 0
 
 FILTER_EXTENDED_SHADOW = True
 
@@ -18,10 +19,10 @@ pub2 = rospy.Publisher("sonar_processing/averages2", Float64MultiArray, queue_si
 
 NUM_BINS = 20
 
-averages_mat = np.zeros((NUM_BINS,200))
+averages_mat = np.zeros((NUM_BINS,(400 / 2)))
 
 def callback(msg):
-    global pub, pub2, THRESHOLD, MIN_DIST, NUM_BINS
+    global pub, pub2, THRESHOLD, MIN_DIST, NUM_BINS, COUNTER
     
     # values = [x for x in msg.intensities)]
     vals = []
@@ -33,7 +34,8 @@ def callback(msg):
     for i in range(NUM_BINS):
         bin_avgs.append( np.mean( vals[i*num_pts: (i+1)*num_pts] ))
 
-    averages_mat[:,int(msg.angle / 2)] = np.array(bin_avgs)
+    averages_mat[:,COUNTER] = np.array(bin_avgs)
+    COUNTER = (COUNTER + 1) % (400 / 2)
     cnt = np.count_nonzero(averages_mat)
     print(cnt)
     if cnt >= NUM_BINS * 200:
