@@ -10,6 +10,7 @@ import struct
 THRESHOLD = 130
 MIN_DIST = 1.5
 COUNTER = 0
+STEP = 4
 
 FILTER_EXTENDED_SHADOW = True
 
@@ -19,7 +20,7 @@ pub2 = rospy.Publisher("sonar_processing/averages2", Float64MultiArray, queue_si
 
 NUM_BINS = 20
 
-averages_mat = np.zeros((NUM_BINS,(400 / 2)))
+averages_mat = np.zeros((NUM_BINS,(400 / STEP)))
 
 def callback(msg):
     global pub, pub2, THRESHOLD, MIN_DIST, NUM_BINS, COUNTER
@@ -34,11 +35,15 @@ def callback(msg):
     for i in range(NUM_BINS):
         bin_avgs.append( np.mean( vals[i*num_pts: (i+1)*num_pts] ))
 
+    if np.count_nonzero(bin_avgs) != NUM_BINS:
+        return
+
     averages_mat[:,COUNTER] = np.array(bin_avgs)
-    COUNTER = (COUNTER + 1) % (400 / 2)
+
+    COUNTER = (COUNTER + 1) % (400 / STEP)
     cnt = np.count_nonzero(averages_mat)
     print(cnt)
-    if cnt >= NUM_BINS * 200:
+    if cnt >= NUM_BINS * (400 / STEP):
         print("FULL")
         for i in range(4,10): # 10 bins seemed to be the max
             mean_radial = np.mean(averages_mat[i,:])

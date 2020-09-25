@@ -7,7 +7,7 @@
         <param name="debug" value="False"/>
         <param name="imgSize" value="500"/>
         <param name="gain" value="0"/>
-        <param name="step" value="2"/>
+        <param name="step" value="4"/>
         <param name="numberOfSamples" value="512"/>
         <param name="transmitFrequency" value="740"/>
         <param name="sonarRange" value="10"/>
