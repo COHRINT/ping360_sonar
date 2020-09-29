@@ -1,14 +1,16 @@
 <launch>
     <arg name="scan_update_rate_hz" default="1" />
-    <arg name="landmark_x" default="0"/>
-    <arg name="landmark_y" default="0"/>
+    <arg name="landmark_file" default="$(find etddf)/config/landmarks_sim.yaml"/>
     <arg name="red_team_names" default="[]"/>
     <arg name="360_scan_range_m" default="10" />
+    <!-- <arg name="default_track" default="None" />  --> <!-- Default object to track -->
+    <arg name="default_track" default="landmark_pole2" /> <!-- Default object to track -->
     <node name="sonar_control" pkg="ping360_sonar" type="sonar_control_node.py" output="screen">
-        <param name="landmark_x" value="$(arg landmark_x)" />
-        <param name="landmark_y" value="$(arg landmark_y)" />
+        <rosparam command="load" file="$(arg landmark_file)" />
         <param name="scan_update_rate_hz" value="$(arg scan_update_rate_hz)" />
         <rosparam param="red_team_names" subst_value="True">$(arg red_team_names)</rosparam>
         <param name="360_scan_range_m" value="$(arg 360_scan_range_m)" />
+        <rosparam command="load" file="$(arg landmark_file)" />
+        <param name="default_track" value="$(arg default_track)" />
     </node>
 </launch>
