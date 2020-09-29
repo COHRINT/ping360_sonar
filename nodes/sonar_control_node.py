@@ -22,9 +22,9 @@ class ScannerControl:
         ownship = rospy.get_namespace()[:-1] + "/pose_gt"
         rospy.Subscriber(ownship,Odometry,self.pose_callback)
         rospy.wait_for_message(ownship, Odometry)
-        rospy.Subscriber("etddf/estimate/red_actor_0", Odometry, self.red_actor_callback)
+        
         # rospy.Subscriber("ping_360_target",SonarTargetList,self.check_for_landmark)
-        self.landmark_dict = rospy.get_param("~landmarks")
+        self.landmark_dict = rospy.get_param("~landmarks", {})
         default_track = rospy.get_param("~default_track")
         print(default_track)
         if default_track != "None":
@@ -40,6 +40,8 @@ class ScannerControl:
         self._red_team_names = rospy.get_param('~red_team_names',[])
         if len(self._red_team_names) > 0:
             self._red_agent_id = self._red_team_names[0]
+            for i in self._red_team_names:
+                rospy.Subscriber("etddf/estimate/" + i, Odometry, self.red_actor_callback)
         else:
             self._red_agent_id = -1
 

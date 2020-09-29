@@ -23,7 +23,7 @@
         <param name="convertToEnu" value="True"/>
     </node>
 
-    <node pkg="ping360_sonar" type="sonar_detection.py" name="sonar_detection" output="screen">
-        <param name="pickle_path" value="$(find ping360_sonar)/cfg/detection_averages.pickle"/>
-    </node> 
+    <!-- Launch detection node -->
+    <include file="$(find ping360_sonar)/launch/detection.launch" />
+
 </launch>

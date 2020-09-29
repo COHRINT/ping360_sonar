@@ -1,0 +1,7 @@
+<launch>
+
+    <node pkg="ping360_sonar" type="sonar_detection.py" name="sonar_detection" output="screen">
+        <param name="pickle_path" value="$(find ping360_sonar)/cfg/detection_averages.pickle"/>
+    </node> 
+
+</launch>
