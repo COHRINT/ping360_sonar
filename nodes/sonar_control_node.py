@@ -98,7 +98,7 @@ class ScannerControl:
             self.cuprint("Scanning 360")
         elif req.mode.object == "landmark":
             self.cuprint("Tracking Landmark")
-        elif req.mode.object == "red_actor_0":
+        elif req.mode.object == self._red_agent_id:
             self.cuprint("Tracking Red Actor")
         else:
             raise NotImplementedError("Tracking of: " + req.object)
