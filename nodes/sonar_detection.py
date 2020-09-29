@@ -52,9 +52,7 @@ def callback(msg):
 
     COUNTER = (COUNTER + 1) % (400 / STEP)
     cnt = np.count_nonzero(averages_mat)
-    print(cnt)
     if cnt >= NUM_BINS * (400 / STEP):
-        print("FULL")
         if not saved:
             pickle.dump(averages_mat, open(pickle_path, 'wb+'))
             print('Saved averages to pickle')
@@ -64,9 +62,9 @@ def callback(msg):
             std_radial = np.std(averages_mat[i,:])
             thresh = mean_radial - 1.5*std_radial
             if bin_avgs[i] < thresh:
-                print(str(msg.angle) + " DETECTION! in bin: " + str(i))
-                print([mean_radial, std_radial, bin_avgs[i]])
+                print("DETECTION! in bin: " + str(i))
                 angle = msg.angle * (np.pi / 200.0) # Convert grad to rad
+                angle += np.pi # Transform to baselink frame
                 detection_range = i * (10 / float(NUM_BINS))
                 target = SonarTarget("detection", angle, 0.1, 0, 0.1, detection_range, 0.1, False, 
                     SonarTarget().TARGET_TYPE_UNKNOWN, 0)
@@ -74,6 +72,6 @@ def callback(msg):
                 pub.publish(stl)
         
 
-rospy.Subscriber("/ping360_node/sonar/data", SonarEcho, callback)
+rospy.Subscriber("ping360_node/sonar/data", SonarEcho, callback)
 print("loaded")
 rospy.spin()
