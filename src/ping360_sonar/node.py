@@ -176,11 +176,11 @@ def main():
 
     # Topic publishers
     imagePub = rospy.Publisher(
-        "/ping360_node/sonar/images", Image, queue_size=queue_size)
-    rawPub = rospy.Publisher("/ping360_node/sonar/data",
+        "ping360_node/sonar/images", Image, queue_size=queue_size)
+    rawPub = rospy.Publisher("ping360_node/sonar/data",
                              SonarEcho, queue_size=queue_size)
     laserPub = rospy.Publisher(
-        "/ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
+        "ping360_node/sonar/scan", LaserScan, queue_size=queue_size)
 
     rospy.Service("ping360_node/sonar/set_sonar_settings",SetSonarSettings, sonar_settings_callback)
 

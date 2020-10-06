@@ -48,7 +48,7 @@ def callback(msg):
     if np.count_nonzero(bin_avgs) != NUM_BINS:
         return
 
-    averages_mat[:,COUNTER] = np.array(bin_avgs)
+    # averages_mat[:,COUNTER] = np.array(bin_avgs)
 
     COUNTER = (COUNTER + 1) % (400 / STEP)
     cnt = np.count_nonzero(averages_mat)
