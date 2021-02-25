@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import rospy
 from ping360_sonar.msg import SonarEcho
 import matplotlib.pyplot as plt

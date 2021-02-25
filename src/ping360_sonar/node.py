@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import division
 
 from math import cos, pi, sin
@@ -14,7 +14,7 @@ from sensor_msgs.msg import LaserScan
 from ping360_sonar.cfg import sonarConfig
 from ping360_sonar.msg import SonarEcho
 from ping360_sonar.srv import SetSonarSettings
-from sensor import Ping360
+from ping360_sonar.sensor import Ping360
 from std_msgs.msg import UInt16MultiArray
 
 # Global Variables

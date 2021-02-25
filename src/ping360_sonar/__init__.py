@@ -1,4 +1,4 @@
-from node import main
+from ping360_sonar.node import main
 from brping.definitions import *
 from brping.pingmessage import *
 from brping.device import PingDevice

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # device.py
 # A device API for devices implementing Blue Robotics ping-protocol
