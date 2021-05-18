@@ -1,6 +1,6 @@
 <launch>
     <arg name="scan_update_rate_hz" default="1" />
-    <arg name="landmark_file" default="$(find etddf)/config/landmarks_sim.yaml"/>
+    <arg name="landmark_file" default="$(find etddf_minau)/config/landmarks_sim.yaml"/>
     <arg name="red_team_names" default="[]"/>
     <arg name="360_scan_range_m" default="10" />
     <!-- <arg name="default_track" default="None" />  --> <!-- Default object to track -->
